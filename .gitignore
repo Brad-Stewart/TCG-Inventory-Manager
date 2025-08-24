@@ -1,0 +1,37 @@
+# Database files
+inventory.db
+*.db
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Session files
+cookies.txt
+fresh_cookies.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak

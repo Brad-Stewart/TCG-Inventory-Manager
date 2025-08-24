@@ -1,0 +1,189 @@
+/* Custom styles for TCG Inventory Manager */
+
+/* Sticky navbar */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+}
+
+/* Add padding to body to account for fixed navbar */
+body {
+    padding-top: 76px;
+}
+
+.card-image-container {
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.card-image-container img {
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.stat-card {
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.price-positive {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.price-negative {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.price-neutral {
+    color: #6c757d;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+/* Card preview images */
+.card-preview-container {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.card-preview-small {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.card-preview-small:hover {
+    transform: scale(1.1);
+    border-color: #007bff;
+    z-index: 10;
+    position: relative;
+}
+
+.card-preview-placeholder {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.card-preview-placeholder:hover {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+}
+
+/* Large preview overlay */
+.card-preview-large {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    max-width: 300px;
+    max-height: 420px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border: 2px solid #fff;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.card-preview-large.show {
+    opacity: 1;
+}
+
+.card-preview-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9998;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.card-preview-backdrop.show {
+    opacity: 1;
+}
+
+.alert-card {
+    border-left: 4px solid #ffc107;
+}
+
+.alert-card.read {
+    border-left: 4px solid #6c757d;
+}
+
+.foil-badge {
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+    color: #333;
+}
+
+.navbar-brand i {
+    margin-right: 8px;
+}
+
+.btn-group-actions {
+    white-space: nowrap;
+}
+
+.card-stats {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.loading-spinner {
+    display: none;
+}
+
+.loading .loading-spinner {
+    display: inline-block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group-actions .btn {
+        margin-bottom: 5px;
+    }
+    
+    .table-responsive {
+        font-size: 0.9em;
+    }
+}
+
+/* Animation for new alerts */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+.alert-new {
+    animation: pulse 2s infinite;
+}
