@@ -15,7 +15,14 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="card_name" class="form-label">Card Name *</label>
-                                <input type="text" class="form-control" id="card_name" name="card_name" required>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="card_name" name="card_name" 
+                                           autocomplete="off" placeholder="Start typing to search..." required>
+                                    <div id="card_suggestions" class="card-suggestions"></div>
+                                    <div id="search_loading" class="position-absolute top-50 end-0 translate-middle-y me-2" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin text-muted"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">

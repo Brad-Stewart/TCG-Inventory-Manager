@@ -1,4 +1,4 @@
-/* Custom styles for TCG Inventory Manager */
+/* Custom styles for PackRat */
 
 /* Sticky navbar */
 .navbar {
@@ -112,6 +112,14 @@ body {
     opacity: 1;
 }
 
+.no-image-message {
+    transition: opacity 0.2s ease;
+}
+
+.no-image-message:not(.show) {
+    opacity: 0;
+}
+
 .card-preview-backdrop {
     position: fixed;
     top: 0;
@@ -186,4 +194,129 @@ body {
 
 .alert-new {
     animation: pulse 2s infinite;
+}
+
+/* Card autocomplete suggestions */
+.card-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.card-suggestions.show {
+    display: block;
+}
+
+.suggestion-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f8f9fa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.15s ease;
+}
+
+.suggestion-item:hover,
+.suggestion-item.highlighted {
+    background-color: #f8f9fa;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-image {
+    width: 40px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 0.75rem;
+    border: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
+.suggestion-image-placeholder {
+    width: 40px;
+    height: 56px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.suggestion-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.suggestion-name {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.suggestion-details {
+    font-size: 0.8rem;
+    color: #6c757d;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.suggestion-set {
+    background-color: #e9ecef;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.suggestion-rarity {
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.suggestion-rarity.mythic {
+    background-color: #dc3545;
+    color: white;
+}
+
+.suggestion-rarity.rare {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.suggestion-rarity.uncommon {
+    background-color: #0dcaf0;
+    color: white;
+}
+
+.suggestion-rarity.common {
+    background-color: #6c757d;
+    color: white;
+}
+
+.suggestion-price {
+    color: #198754;
+    font-weight: 600;
+    margin-left: auto;
 }

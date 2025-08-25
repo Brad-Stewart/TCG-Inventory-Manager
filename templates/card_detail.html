@@ -5,14 +5,31 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
-        {% if card.image_url %}
-        <img src="{{ card.image_url }}" class="img-fluid rounded" alt="{{ card.card_name }}">
-        {% else %}
-        <div class="bg-light rounded p-5 text-center">
-            <i class="fas fa-image fa-3x text-muted"></i>
-            <p class="text-muted mt-2">No image available</p>
+        <div class="card-image-container">
+            {% if card.image_url %}
+            <img id="cardImageFront" src="{{ card.image_url }}" class="img-fluid rounded" alt="{{ card.card_name }}" style="cursor: pointer;">
+            
+            {% if card.image_url_back %}
+            <!-- Back side image (hidden by default) -->
+            <img id="cardImageBack" src="{{ card.image_url_back }}" class="img-fluid rounded" alt="{{ card.card_name }} (Back)" 
+                 style="display: none; cursor: pointer;">
+            
+            <!-- Flip button for double-faced cards -->
+            <div class="mt-2 text-center">
+                <button id="flipCardBtn" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-sync-alt"></i> <span id="flipText">Show Back</span>
+                </button>
+                <div class="form-text">Double-faced card - click to flip</div>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="bg-light rounded p-5 text-center">
+                <i class="fas fa-image fa-3x text-muted"></i>
+                <p class="text-muted mt-2">No image available</p>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
     
     <div class="col-md-8">
@@ -144,4 +161,65 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const flipBtn = document.getElementById('flipCardBtn');
+    const frontImage = document.getElementById('cardImageFront');
+    const backImage = document.getElementById('cardImageBack');
+    const flipText = document.getElementById('flipText');
+    
+    if (flipBtn && frontImage && backImage) {
+        let showingFront = true;
+        
+        // Handle flip button click
+        flipBtn.addEventListener('click', function() {
+            flipCard();
+        });
+        
+        // Handle image click
+        frontImage.addEventListener('click', function() {
+            flipCard();
+        });
+        
+        backImage.addEventListener('click', function() {
+            flipCard();
+        });
+        
+        function flipCard() {
+            if (showingFront) {
+                // Show back
+                frontImage.style.display = 'none';
+                backImage.style.display = 'block';
+                flipText.textContent = 'Show Front';
+                showingFront = false;
+            } else {
+                // Show front
+                backImage.style.display = 'none';
+                frontImage.style.display = 'block';
+                flipText.textContent = 'Show Back';
+                showingFront = true;
+            }
+            
+            // Add flip animation
+            const currentImage = showingFront ? frontImage : backImage;
+            currentImage.style.transform = 'rotateY(180deg)';
+            setTimeout(() => {
+                currentImage.style.transform = 'rotateY(0deg)';
+            }, 150);
+        }
+    }
+});
+</script>
+
+<style>
+.card-image-container img {
+    transition: transform 0.3s ease;
+}
+
+.card-image-container img:hover {
+    transform: scale(1.02);
+}
+</style>
+
 {% endblock %}

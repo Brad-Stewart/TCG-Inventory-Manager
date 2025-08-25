@@ -955,106 +955,19 @@ def collections():
                (SELECT COUNT(*) FROM user_collection_instances WHERE template_id = ct.id AND user_id = ?) as is_imported
         FROM collection_templates ct
         JOIN users u ON ct.created_by = u.id
-        WHERE ct.is_public = 1 OR ct.created_by = ?
-        ORDER BY ct.created_at DESC
-    ''', (user_id, user_id)).fetchall()
-    
-    # Get user's imported collections
-    user_collections = conn.execute('''
-        SELECT uci.*, ct.name as template_name, ct.description,
-               (SELECT COUNT(*) FROM cards WHERE user_id = ? AND source_template_id = ct.id) as card_count
-        FROM user_collection_instances uci
-        JOIN collection_templates ct ON uci.template_id = ct.id
-        WHERE uci.user_id = ?
-        ORDER BY uci.imported_at DESC
-    ''', (user_id, user_id)).fetchall()
-    
-    conn.close()
-    
-    return render_template('collections.html', templates=templates, user_collections=user_collections)
-
-@app.route('/import_template/<int:template_id>')
-@login_required
-def import_template(template_id):
-    """Import a collection template as user's independent collection"""
-    user_id = get_current_user_id()
-    
-    # Check if template exists and is accessible
-    conn = inventory_app.get_db_connection()
-    template = conn.execute('''
-        SELECT * FROM collection_templates 
-        WHERE id = ? AND (is_public = 1 OR created_by = ?)
-    ''', (template_id, user_id)).fetchone()
-    conn.close()
-    
-    if not template:
-        flash('Collection template not found or not accessible', 'error')
-        return redirect(url_for('collections'))
-    
-    # Import template as user collection
-    imported_count = import_template_as_user_collection(template_id, user_id)
-    
-    if imported_count > 0:
-        flash(f'Successfully imported {imported_count} cards from "{template["name"]}" collection')
-    else:
-        flash('Collection already imported or no cards to import')
-    
-    return redirect(url_for('index'))
-
-@app.route('/share_template/<int:template_id>')
-@login_required
-def share_template(template_id):
-    """Make a template public for sharing"""
-    user_id = get_current_user_id()
-    
-    conn = inventory_app.get_db_connection()
-    
-    # Verify user owns this template
-    template = conn.execute('SELECT * FROM collection_templates WHERE id = ? AND created_by = ?', 
-                           (template_id, user_id)).fetchone()
-    
-    if not template:
-        flash('Template not found or you do not have permission to share it', 'error')
-        conn.close()
-        return redirect(url_for('collections'))
-    
-    # Make template public
-    conn.execute('UPDATE collection_templates SET is_public = 1 WHERE id = ?', (template_id,))
-    conn.commit()
-    conn.close()
-    
-    flash(f'Collection template "{template["name"]}" is now public and can be imported by other users')
-    return redirect(url_for('collections'))
-
-@app.route('/delete_template/<int:template_id>', methods=['POST'])
-@login_required
-def delete_template(template_id):
-    """Delete a collection template (only if user created it)"""
-    user_id = get_current_user_id()
-    
-    conn = inventory_app.get_db_connection()
-    
-    # Verify user owns this template
-    template = conn.execute('SELECT * FROM collection_templates WHERE id = ? AND created_by = ?', 
-                           (template_id, user_id)).fetchone()
-    
-    if not template:
-        flash('Template not found or you do not have permission to delete it', 'error')
-        conn.close()
-        return redirect(url_for('collections'))
-    
-    # Delete template and associated data
-    conn.execute('DELETE FROM card_templates WHERE template_id = ?', (template_id,))
-    conn.execute('DELETE FROM user_collection_instances WHERE template_id = ?', (template_id,))
-    conn.execute('DELETE FROM collection_templates WHERE id = ?', (template_id,))
-    
-    conn.commit()
-    conn.close()
-    
-    flash(f'Collection template "{template["name"]}" has been deleted')
-    return redirect(url_for('collections'))
-
-def fetch_scryfall_data_standalone(card_name: str, set_code: str = None, collector_number: str = None) -> dict:
+                set_code = str(row['set_code']).strip() if pd.notna(row['set_code']) else ''
+                collector_number = str(row['collector_number']).strip() if pd.notna(row['collector_number']) else ''
+                
+                # Convert condition format (near_mint -> Near Mint)
+                condition_raw = str(row['condition']).strip() if pd.notna(row['condition']) else 'near_mint'
+                condition = condition_raw.replace('_', ' ').title()
+                
+                # Convert language code (en -> English) 
+                language_raw = str(row['language']).strip() if pd.notna(row['language']) else 'en'
+                language = 'English' if language_raw == 'en' else language_raw
+                
+                # Get rarity from CSV
+                rarity = str(row.get('rarity', '')).strip() if pd.notna(row.get('rarity', '')) else ''
                 
                 # Handle numeric fields safely
                 try:
