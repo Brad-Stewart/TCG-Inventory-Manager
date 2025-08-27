@@ -6,12 +6,13 @@ import sqlite3
 import threading
 import logging
 import hashlib
+import os
 from datetime import datetime, timedelta
 from functools import wraps
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')  
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,8 +23,12 @@ progress_state = {}
 active_updates = {}
 
 class TCGInventoryManager:
-    def __init__(self, db_path='../inventory.db'):
-        self.db_path = db_path
+    def __init__(self, db_path=None):
+        if db_path is None:
+            # Use environment variable or default to local path
+            self.db_path = os.environ.get('DATABASE_PATH', 'inventory.db')
+        else:
+            self.db_path = db_path
         self.init_database()
     
     def get_db_connection(self):
@@ -1336,4 +1341,6 @@ def api_card_image(card_id):
         return jsonify({'image_url': None})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    port = int(os.environ.get('PORT', 5001))
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
