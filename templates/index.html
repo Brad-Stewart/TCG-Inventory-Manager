@@ -102,13 +102,40 @@
     </div>
 </div>
 
+<!-- Quick Search Bar -->
+<div class="row mb-3">
+    <div class="col-md-8">
+        <form method="GET" action="{{ url_for('index') }}" class="d-flex" id="searchForm">
+            <input type="text" class="form-control me-2" name="search" id="quickSearchInput"
+                   placeholder="Search cards by name, set, or type..." 
+                   value="{{ current_filters.search }}"
+                   style="flex: 1;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Search
+            </button>
+            {% if current_filters.search %}
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-4">
+        <div id="searchStatus" class="text-muted small mt-2">
+            {% if current_filters.search %}
+            Searching for: <strong>"{{ current_filters.search }}"</strong>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 <div class="row mb-3">
     <div class="col-md-6">
         <h3>Inventory</h3>
     </div>
     <div class="col-md-6 text-end">
         <button class="btn btn-outline-secondary me-2" data-bs-toggle="collapse" data-bs-target="#filterPanel">
-            <i class="fas fa-filter"></i> Filters
+            <i class="fas fa-filter"></i> Advanced Filters
         </button>
         <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">
             <i class="fas fa-upload"></i> Import CSV
@@ -163,6 +190,9 @@
                                     {{ rarity.rarity }}
                                 </option>
                                 {% endfor %}
+                                {% if not rarities %}
+                                <option value="" disabled>No rarities available</option>
+                                {% endif %}
                             </select>
                         </div>
                     </div>
@@ -176,6 +206,9 @@
                                     {{ color.colors }}
                                 </option>
                                 {% endfor %}
+                                {% if not colors %}
+                                <option value="" disabled>No colors available</option>
+                                {% endif %}
                             </select>
                         </div>
                     </div>
@@ -189,6 +222,9 @@
                                     {{ type.card_type }}
                                 </option>
                                 {% endfor %}
+                                {% if not card_types %}
+                                <option value="" disabled>No types available</option>
+                                {% endif %}
                             </select>
                         </div>
                     </div>
@@ -204,7 +240,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <div class="mb-3">
                             <label for="sort" class="form-label">Sort By</label>
                             <select class="form-select" id="sort" name="sort">
@@ -218,12 +254,10 @@
                             </select>
                         </div>
                     </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
+                    <div class="col-md-1">
                         <div class="mb-3">
                             <label for="order" class="form-label">Order</label>
-                            <select class="form-select" id="order" name="order" style="max-width: 100px; display: inline-block;">
+                            <select class="form-select" id="order" name="order">
                                 <option value="desc" {{ 'selected' if current_filters.order == 'desc' }}>↓</option>
                                 <option value="asc" {{ 'selected' if current_filters.order == 'asc' }}>↑</option>
                             </select>
@@ -245,6 +279,13 @@
                             Showing {{ cards|length }} of {{ pagination.total }} cards 
                             (Page {{ pagination.page }} of {{ pagination.pages }})
                         </span>
+                        {% if not rarities and not colors and not card_types %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>No filter options available.</strong> 
+                            Import some cards first to see rarity, color, and type filter options.
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </form>
@@ -339,9 +380,9 @@
                 <td>
                     {% if card.mana_cost %}
                         <code>{{ card.mana_cost }}</code>
-                        <small class="text-muted">({{ card.mana_value or 0 }})</small>
+                        <small class="text-muted">({% if 'Land' in (card.card_type or '') and (card.mana_value or 0) == 0 %}-{% else %}{{ card.mana_value or 0 }}{% endif %})</small>
                     {% else %}
-                        <span class="text-muted">{{ card.mana_value or 0 }}</span>
+                        <span class="text-muted">{% if 'Land' in (card.card_type or '') and (card.mana_value or 0) == 0 %}-{% else %}{{ card.mana_value or 0 }}{% endif %}</span>
                     {% endif %}
                 </td>
                 <td>{{ card.quantity }}</td>
@@ -479,4 +520,62 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('quickSearchInput');
+    const searchStatus = document.getElementById('searchStatus');
+    let searchTimeout = null;
+    
+    if (searchInput) {
+        // Add input event listener for real-time search
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            // Clear existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Update search status immediately
+            if (query.length > 0) {
+                searchStatus.innerHTML = 'Searching for: <strong>"' + escapeHtml(query) + '"</strong> <span class="spinner-border spinner-border-sm text-muted ms-2" role="status"></span>';
+            } else {
+                searchStatus.innerHTML = '';
+            }
+            
+            // Set timeout for search execution (debounce)
+            searchTimeout = setTimeout(function() {
+                if (query.length >= 2 || query.length === 0) {
+                    // Update URL and submit form
+                    const form = document.getElementById('searchForm');
+                    const currentUrl = new URL(window.location.href);
+                    
+                    if (query.length > 0) {
+                        currentUrl.searchParams.set('search', query);
+                    } else {
+                        currentUrl.searchParams.delete('search');
+                    }
+                    
+                    // Navigate to new URL to trigger server-side search
+                    window.location.href = currentUrl.toString();
+                }
+            }, 300); // 300ms delay to avoid too many requests while typing
+        });
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+});
+</script>
+
 {% endblock %}
