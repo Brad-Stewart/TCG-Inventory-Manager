@@ -158,6 +158,35 @@ class TCGInventoryManager:
 # Initialize the inventory manager
 inventory_app = TCGInventoryManager()
 
+# Create default admin user if it doesn't exist
+def create_default_admin():
+    """Create default admin user for first-time setup"""
+    try:
+        conn = inventory_app.get_db_connection()
+        
+        # Check if admin user already exists
+        existing_admin = conn.execute('SELECT id FROM users WHERE email = ?', ('admin@packrat.local',)).fetchone()
+        
+        if not existing_admin:
+            admin_password_hash = hash_password('packrat123')
+            conn.execute('''
+                INSERT INTO users (email, password_hash, created_at, last_login)
+                VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ''', ('admin@packrat.local', admin_password_hash))
+            
+            conn.commit()
+            logger.info("✅ Default admin user created: admin@packrat.local / packrat123")
+        else:
+            logger.info("ℹ️ Admin user already exists")
+            
+        conn.close()
+        
+    except Exception as e:
+        logger.error(f"❌ Could not create admin user: {e}")
+
+# Initialize admin user on app startup
+create_default_admin()
+
 def fetch_scryfall_data_standalone(card_name, set_code=None, collector_number=None):
     """Fetch card data from Scryfall API with enhanced double-faced card support"""
     import requests
