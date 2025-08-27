@@ -184,8 +184,7 @@ def create_default_admin():
     except Exception as e:
         logger.error(f"❌ Could not create admin user: {e}")
 
-# Initialize admin user on app startup
-create_default_admin()
+# Admin user creation will be moved after helper functions
 
 def fetch_scryfall_data_standalone(card_name, set_code=None, collector_number=None):
     """Fetch card data from Scryfall API with enhanced double-faced card support"""
@@ -433,6 +432,9 @@ def login_required(f):
 
 def get_current_user_id():
     return session.get('user_id')
+
+# Initialize admin user after all helper functions are defined
+create_default_admin()
 
 # Routes
 @app.route('/login', methods=['GET', 'POST'])
