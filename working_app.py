@@ -21,8 +21,34 @@ logger = logging.getLogger(__name__)
 progress_state = {}
 active_updates = {}
 
+def calculate_total_mana_cost(mana_cost):
+    """Calculate the total mana cost from a mana cost string like '{2}{W}{U}'"""
+    if not mana_cost:
+        return 0
+    
+    total = 0
+    # Remove outer braces and split by inner braces
+    cost_parts = mana_cost.replace('{', '').replace('}', ' ').split()
+    
+    for part in cost_parts:
+        part = part.strip()
+        if part.isdigit():
+            total += int(part)
+        elif part in ['W', 'U', 'B', 'R', 'G', 'C']:  # Colored mana symbols
+            total += 1
+        elif part == 'X':  # Variable cost
+            total += 0  # X costs can't be calculated without context
+        elif '/' in part:  # Hybrid mana like 'W/U'
+            total += 1
+    
+    return total
+
 def get_color_name_from_mana_cost(mana_cost, base_color):
     """Convert mana cost to guild/clan/shard name if applicable"""
+    # Handle colorless cards (empty color field)
+    if not base_color or base_color == '':
+        return 'Colorless'
+    
     if base_color != 'Multicolor' or not mana_cost:
         return base_color
     
@@ -481,6 +507,9 @@ def index():
                 'Temur': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{B}%")'
             }
             where_conditions.append(f'colors = "Multicolor" AND {three_color_patterns[color]}')
+        elif color == 'Colorless':
+            # Colorless cards (empty or null colors)
+            where_conditions.append('(colors = "" OR colors IS NULL)')
         else:
             # Regular color filter
             where_conditions.append('colors LIKE ?')
@@ -557,28 +586,38 @@ def index():
     '''
     cards_raw = conn.execute(cards_query, where_params + [per_page, offset]).fetchall()
     
-    # Convert cards to dict and add display color names
+    # Convert cards to dict and add display color names and calculated mana cost
     cards = []
     for card in cards_raw:
         card_dict = dict(card)
         card_dict['display_color'] = get_color_name_from_mana_cost(card['mana_cost'], card['colors'])
+        card_dict['calculated_mana_cost'] = calculate_total_mana_cost(card['mana_cost'])
         cards.append(card_dict)
     
     # Get filter options for current user
     rarities = conn.execute('SELECT DISTINCT rarity FROM cards WHERE user_id = ? AND rarity IS NOT NULL AND rarity != "" ORDER BY rarity', (user_id,)).fetchall()
     
-    # Get existing colors from database
-    db_colors = conn.execute('SELECT DISTINCT colors FROM cards WHERE user_id = ? AND colors IS NOT NULL AND colors != "" ORDER BY colors', (user_id,)).fetchall()
+    # Get existing colors from database (including empty for colorless)
+    db_colors = conn.execute('SELECT DISTINCT colors FROM cards WHERE user_id = ? ORDER BY colors', (user_id,)).fetchall()
     
-    # Create expanded color filter options
+    # Create expanded color filter options in specific order
     color_options = []
     
-    # Add existing database colors first
-    for db_color in db_colors:
-        color_options.append({'colors': db_color['colors'], 'display': db_color['colors']})
+    # First add single colors in WUBRG order
+    single_colors = ['White', 'Blue', 'Black', 'Red', 'Green']
+    for single_color in single_colors:
+        if any(c['colors'] == single_color for c in db_colors):
+            color_options.append({'colors': single_color, 'display': single_color})
     
-    # Add guild names (2-color) only if multicolor cards exist
+    # Add Colorless between Green and All Multicolor if there are cards with empty colors
+    if any(c['colors'] == '' for c in db_colors):
+        color_options.append({'colors': 'Colorless', 'display': 'Colorless'})
+    
+    # Add "All Multicolor" if multicolor cards exist (rename from "Multicolor")
     if any(c['colors'] == 'Multicolor' for c in db_colors):
+        color_options.append({'colors': 'Multicolor', 'display': 'All Multicolor'})
+        
+        # Add guild names (2-color)
         guilds = [
             {'colors': 'Azorius', 'display': 'Azorius (Blue/White)'},
             {'colors': 'Boros', 'display': 'Boros (Red/White)'},

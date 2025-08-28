@@ -143,6 +143,16 @@
                         <p><strong>Collector Number:</strong> {{ card.collector_number or 'N/A' }}</p>
                         <p><strong>Language:</strong> {{ card.language or 'English' }}</p>
                         <p><strong>Foil:</strong> {{ 'Yes' if card.is_foil else 'No' }}</p>
+                        <p><strong>Mana Cost:</strong> 
+                            {% if card.mana_cost %}
+                                <span class="fw-bold">{{ card.mana_cost.replace('{', '').replace('}', '') }}</span>
+                                {% if card.mana_value %}
+                                    <small class="text-muted ms-1">(CMC {{ card.mana_value }})</small>
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Price Change:</strong> 

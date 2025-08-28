@@ -143,32 +143,6 @@
     </div>
 </div>
 
-<!-- Quick Search Bar -->
-<div class="row mb-3">
-    <div class="col-md-8">
-        <form method="GET" action="{{ url_for('index') }}" class="d-flex">
-            <input type="text" class="form-control me-2" name="search" 
-                   placeholder="Search cards by name, set, or type..." 
-                   value="{{ current_filters.search }}"
-                   style="flex: 1;">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-search"></i> Search
-            </button>
-            {% if current_filters.search %}
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">
-                <i class="fas fa-times"></i> Clear
-            </a>
-            {% endif %}
-        </form>
-    </div>
-    <div class="col-md-4">
-        {% if current_filters.search %}
-        <div class="text-muted small mt-2">
-            Searching for: <strong>"{{ current_filters.search }}"</strong>
-        </div>
-        {% endif %}
-    </div>
-</div>
 
 <!-- Mass Action Panel -->
 <div class="card mb-3" id="massActionPanel" style="display: none;">
@@ -378,6 +352,7 @@
                             {% if card.rarity == 'Mythic' %}rarity-mythic
                             {% elif card.rarity == 'Rare' %}bg-warning
                             {% elif card.rarity == 'Uncommon' %}bg-info
+                            {% elif card.rarity == 'Special' %}rarity-special
                             {% else %}bg-secondary
                             {% endif %}">
                             {{ card.rarity }}
@@ -385,7 +360,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if card.colors %}
+                    {% if card.colors or card.display_color == 'Colorless' %}
                         <span class="color-badge
                             {% if card.display_color == 'White' %} color-white
                             {% elif card.display_color == 'Blue' %} color-blue
@@ -412,8 +387,8 @@
                             {% elif card.display_color == 'Jeskai' %} color-jeskai
                             {% elif card.display_color == 'Sultai' %} color-sultai
                             {% elif card.display_color == 'Temur' %} color-temur
+                            {% elif card.display_color == 'Colorless' %} color-colorless
                             {% elif card.colors == 'Multicolor' %} color-multicolor
-                            {% elif card.colors == 'Colorless' %} color-colorless
                             {% else %} color-other
                             {% endif %}">
                             {{ card.display_color }}
@@ -427,10 +402,10 @@
                 </td>
                 <td>
                     {% if card.mana_cost %}
-                        <code>{{ card.mana_cost }}</code>
-                        <small class="text-muted">({% if 'Land' in (card.card_type or '') and (card.mana_value or 0) == 0 %}-{% else %}{{ card.mana_value or 0 }}{% endif %})</small>
+                        <span class="fw-bold">{{ card.mana_cost.replace('{', '').replace('}', '') }}</span>
+                        <small class="text-muted ms-1">({{ card.calculated_mana_cost }})</small>
                     {% else %}
-                        <span class="text-muted">{% if 'Land' in (card.card_type or '') and (card.mana_value or 0) == 0 %}-{% else %}{{ card.mana_value or 0 }}{% endif %}</span>
+                        <span class="text-muted">{% if 'Land' in (card.card_type or '') %}-{% else %}0{% endif %}</span>
                     {% endif %}
                 </td>
                 <td>{{ card.quantity }}</td>
@@ -613,8 +588,8 @@
 }
 
 .color-colorless {
-    background-color: #cccccc;
-    color: black;
+    background-color: #666666;
+    color: white;
 }
 
 .color-other {
@@ -743,6 +718,11 @@
 
 .rarity-mythic {
     background-color: #cc6600 !important;
+    color: white !important;
+}
+
+.rarity-special {
+    background-color: #8a2be2 !important;
     color: white !important;
 }
 </style>
