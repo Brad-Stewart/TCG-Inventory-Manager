@@ -21,6 +21,50 @@ logger = logging.getLogger(__name__)
 progress_state = {}
 active_updates = {}
 
+def get_color_name_from_mana_cost(mana_cost, base_color):
+    """Convert mana cost to guild/clan/shard name if applicable"""
+    if base_color != 'Multicolor' or not mana_cost:
+        return base_color
+    
+    # Count color symbols in mana cost
+    has_w = '{W}' in mana_cost
+    has_u = '{U}' in mana_cost
+    has_b = '{B}' in mana_cost
+    has_r = '{R}' in mana_cost
+    has_g = '{G}' in mana_cost
+    
+    color_count = sum([has_w, has_u, has_b, has_r, has_g])
+    
+    if color_count == 2:
+        # Guild names (2-color)
+        if has_u and has_w: return 'Azorius'
+        elif has_r and has_w: return 'Boros'
+        elif has_u and has_b: return 'Dimir'
+        elif has_b and has_g: return 'Golgari'
+        elif has_r and has_g: return 'Gruul'
+        elif has_u and has_r: return 'Izzet'
+        elif has_w and has_b: return 'Orzhov'
+        elif has_r and has_b: return 'Rakdos'
+        elif has_w and has_g: return 'Selesnya'
+        elif has_u and has_g: return 'Simic'
+    elif color_count == 3:
+        # Shard and clan names (3-color)
+        if has_u and has_b and has_r: return 'Grixis'
+        elif has_b and has_r and has_g: return 'Jund'
+        elif has_w and has_r and has_g: return 'Naya'
+        elif has_w and has_u and has_b: return 'Esper'
+        elif has_w and has_u and has_g: return 'Bant'
+        elif has_w and has_b and has_g: return 'Abzan'
+        elif has_w and has_b and has_r: return 'Mardu'
+        elif has_w and has_u and has_r: return 'Jeskai'
+        elif has_u and has_b and has_g: return 'Sultai'
+        elif has_u and has_r and has_g: return 'Temur'
+    elif color_count >= 4:
+        return 'Multicolor'
+    
+    # Fallback to original color
+    return base_color
+
 class TCGInventoryManager:
     def __init__(self, db_path='inventory.db'):
         self.db_path = db_path
@@ -221,6 +265,11 @@ def extract_card_data(data):
                 if 'image_uris' in second_face:
                     image_url_back = second_face['image_uris'].get('normal', '')
         
+        # Sort colors in WUBRG order
+        colors = data.get('colors', [])
+        color_order = {'W': 0, 'U': 1, 'B': 2, 'R': 3, 'G': 4}
+        sorted_colors = sorted(colors, key=lambda c: color_order.get(c, 5))
+        
         # Extract basic data
         card_info = {
             'usd': data.get('prices', {}).get('usd'),
@@ -229,7 +278,7 @@ def extract_card_data(data):
             'image_url': image_url,
             'image_url_back': image_url_back,
             'rarity': data.get('rarity', '').title(),
-            'colors': ','.join(data.get('colors', [])),
+            'colors': ''.join(sorted_colors),
             'mana_cost': data.get('mana_cost', ''),
             'mana_value': data.get('mana_value', 0),
             'card_type': data.get('type_line', '')
@@ -365,7 +414,110 @@ def index():
     user_id = get_current_user_id()
     conn = inventory_app.get_db_connection()
     
-    # Get basic stats
+    # Get filter parameters
+    search = request.args.get('search', '').strip()
+    rarity = request.args.get('rarity', '').strip()
+    color = request.args.get('color', '').strip()
+    card_type = request.args.get('card_type', '').strip()
+    mana_min = request.args.get('mana_min', '').strip()
+    mana_max = request.args.get('mana_max', '').strip()
+    sort_by = request.args.get('sort', 'total_value')
+    order = request.args.get('order', 'desc')
+    
+    # Build WHERE clause for filters
+    where_conditions = ['user_id = ?']
+    where_params = [user_id]
+    
+    if search:
+        where_conditions.append('(LOWER(card_name) LIKE LOWER(?) OR LOWER(set_name) LIKE LOWER(?) OR LOWER(card_type) LIKE LOWER(?))')
+        search_param = f'%{search}%'
+        where_params.extend([search_param, search_param, search_param])
+    
+    if rarity:
+        where_conditions.append('rarity = ?')
+        where_params.append(rarity)
+    
+    if color:
+        # Handle special color filter cases based on mana_cost patterns
+        if color == 'multicolor 4+':
+            # Cards with 4 or more different mana symbols (W, U, B, R, G)
+            where_conditions.append('''
+                colors = "Multicolor" AND (
+                    (mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%") OR
+                    (mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{G}%") OR
+                    (mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%") OR
+                    (mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%") OR
+                    (mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%") OR
+                    (mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%")
+                )
+            ''')
+        elif color in ['Azorius', 'Boros', 'Dimir', 'Golgari', 'Gruul', 'Izzet', 'Orzhov', 'Rakdos', 'Selesnya', 'Simic']:
+            # Guild names (2-color combinations) - check mana_cost for exact combination
+            guild_patterns = {
+                'Azorius': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{W}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{R}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Boros': '(mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{W}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Dimir': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{R}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Golgari': '(mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{R}%")',
+                'Gruul': '(mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{B}%")',
+                'Izzet': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{R}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Orzhov': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{B}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{R}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Rakdos': '(mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{B}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Selesnya': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{R}%")',
+                'Simic': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{R}%")'
+            }
+            where_conditions.append(f'colors = "Multicolor" AND {guild_patterns[color]}')
+        elif color in ['Grixis', 'Jund', 'Naya', 'Esper', 'Bant', 'Abzan', 'Mardu', 'Jeskai', 'Sultai', 'Temur']:
+            # Shard and clan names (3-color combinations) - check mana_cost for exact combination
+            three_color_patterns = {
+                'Grixis': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Jund': '(mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{U}%")',
+                'Naya': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{B}%")',
+                'Esper': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost NOT LIKE "%{R}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Bant': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{R}%")',
+                'Abzan': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{R}%")',
+                'Mardu': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{R}%" AND mana_cost NOT LIKE "%{U}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Jeskai': '(mana_cost LIKE "%{W}%" AND mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{R}%" AND mana_cost NOT LIKE "%{B}%" AND mana_cost NOT LIKE "%{G}%")',
+                'Sultai': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{B}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{R}%")',
+                'Temur': '(mana_cost LIKE "%{U}%" AND mana_cost LIKE "%{R}%" AND mana_cost LIKE "%{G}%" AND mana_cost NOT LIKE "%{W}%" AND mana_cost NOT LIKE "%{B}%")'
+            }
+            where_conditions.append(f'colors = "Multicolor" AND {three_color_patterns[color]}')
+        else:
+            # Regular color filter
+            where_conditions.append('colors LIKE ?')
+            where_params.append(f'%{color}%')
+    
+    if card_type:
+        where_conditions.append('card_type LIKE ?')
+        where_params.append(f'%{card_type}%')
+    
+    if mana_min:
+        try:
+            mana_min_val = int(mana_min)
+            where_conditions.append('mana_value >= ?')
+            where_params.append(mana_min_val)
+        except ValueError:
+            pass
+    
+    if mana_max:
+        try:
+            mana_max_val = int(mana_max)
+            where_conditions.append('mana_value <= ?')
+            where_params.append(mana_max_val)
+        except ValueError:
+            pass
+    
+    where_clause = ' AND '.join(where_conditions)
+    
+    # Validate sort column
+    valid_sorts = ['card_name', 'set_name', 'current_price', 'total_value', 'quantity', 'mana_value']
+    if sort_by not in valid_sorts:
+        sort_by = 'total_value'
+    
+    # Validate order
+    if order not in ['asc', 'desc']:
+        order = 'desc'
+    
+    # Get basic stats (unfiltered)
     stats = conn.execute('''
         SELECT 
             COUNT(*) as total_cards,
@@ -375,39 +527,131 @@ def index():
         FROM cards WHERE user_id = ?
     ''', (user_id,)).fetchone()
     
-    # Get cards with pagination
+    # Debug logging
+    if search:
+        logger.info(f"Search query: '{search}' with WHERE clause: {where_clause}")
+        logger.info(f"Search parameters: {where_params}")
+    
+    # Get filtered card count
+    count_query = f'SELECT COUNT(*) FROM cards WHERE {where_clause}'
+    filtered_count = conn.execute(count_query, where_params).fetchone()[0]
+    
+    if search:
+        logger.info(f"Search returned {filtered_count} results for '{search}'")
+        
+        # Debug: Show a few matching card names
+        debug_query = f'SELECT card_name FROM cards WHERE {where_clause} LIMIT 5'
+        debug_results = conn.execute(debug_query, where_params).fetchall()
+        matching_names = [row['card_name'] for row in debug_results]
+        logger.info(f"Sample matching cards: {matching_names}")
+    
+    # Get cards with pagination and filters
     page = int(request.args.get('page', 1))
     per_page = 50
     offset = (page - 1) * per_page
     
-    cards = conn.execute('''
-        SELECT * FROM cards WHERE user_id = ?
-        ORDER BY total_value DESC 
+    cards_query = f'''
+        SELECT * FROM cards WHERE {where_clause}
+        ORDER BY {sort_by} {order.upper()}
         LIMIT ? OFFSET ?
-    ''', (user_id, per_page, offset)).fetchall()
+    '''
+    cards_raw = conn.execute(cards_query, where_params + [per_page, offset]).fetchall()
     
-    total_cards = conn.execute('SELECT COUNT(*) FROM cards WHERE user_id = ?', (user_id,)).fetchone()[0]
+    # Convert cards to dict and add display color names
+    cards = []
+    for card in cards_raw:
+        card_dict = dict(card)
+        card_dict['display_color'] = get_color_name_from_mana_cost(card['mana_cost'], card['colors'])
+        cards.append(card_dict)
+    
+    # Get filter options for current user
+    rarities = conn.execute('SELECT DISTINCT rarity FROM cards WHERE user_id = ? AND rarity IS NOT NULL AND rarity != "" ORDER BY rarity', (user_id,)).fetchall()
+    
+    # Get existing colors from database
+    db_colors = conn.execute('SELECT DISTINCT colors FROM cards WHERE user_id = ? AND colors IS NOT NULL AND colors != "" ORDER BY colors', (user_id,)).fetchall()
+    
+    # Create expanded color filter options
+    color_options = []
+    
+    # Add existing database colors first
+    for db_color in db_colors:
+        color_options.append({'colors': db_color['colors'], 'display': db_color['colors']})
+    
+    # Add guild names (2-color) only if multicolor cards exist
+    if any(c['colors'] == 'Multicolor' for c in db_colors):
+        guilds = [
+            {'colors': 'Azorius', 'display': 'Azorius (Blue/White)'},
+            {'colors': 'Boros', 'display': 'Boros (Red/White)'},
+            {'colors': 'Dimir', 'display': 'Dimir (Blue/Black)'},
+            {'colors': 'Golgari', 'display': 'Golgari (Black/Green)'},
+            {'colors': 'Gruul', 'display': 'Gruul (Red/Green)'},
+            {'colors': 'Izzet', 'display': 'Izzet (Blue/Red)'},
+            {'colors': 'Orzhov', 'display': 'Orzhov (White/Black)'},
+            {'colors': 'Rakdos', 'display': 'Rakdos (Red/Black)'},
+            {'colors': 'Selesnya', 'display': 'Selesnya (White/Green)'},
+            {'colors': 'Simic', 'display': 'Simic (Blue/Green)'}
+        ]
+        color_options.extend(guilds)
+        
+        # Add shard and clan names (3-color)
+        three_color = [
+            {'colors': 'Grixis', 'display': 'Grixis (Blue/Black/Red)'},
+            {'colors': 'Jund', 'display': 'Jund (Black/Red/Green)'},
+            {'colors': 'Naya', 'display': 'Naya (White/Red/Green)'},
+            {'colors': 'Esper', 'display': 'Esper (White/Blue/Black)'},
+            {'colors': 'Bant', 'display': 'Bant (White/Blue/Green)'},
+            {'colors': 'Abzan', 'display': 'Abzan (White/Black/Green)'},
+            {'colors': 'Mardu', 'display': 'Mardu (White/Black/Red)'},
+            {'colors': 'Jeskai', 'display': 'Jeskai (White/Blue/Red)'},
+            {'colors': 'Sultai', 'display': 'Sultai (Blue/Black/Green)'},
+            {'colors': 'Temur', 'display': 'Temur (Blue/Red/Green)'}
+        ]
+        color_options.extend(three_color)
+        
+        # Add multicolor 4+ option
+        color_options.append({'colors': 'multicolor 4+', 'display': 'Multicolor 4+'})
+    
+    colors = color_options
+    
+    card_types = conn.execute('SELECT DISTINCT card_type FROM cards WHERE user_id = ? AND card_type IS NOT NULL AND card_type != "" ORDER BY card_type', (user_id,)).fetchall()
     
     conn.close()
     
-    # Simple pagination
-    total_pages = (total_cards + per_page - 1) // per_page
+    # Pagination based on filtered results
+    total_pages = (filtered_count + per_page - 1) // per_page
     pagination = {
         'page': page,
         'pages': total_pages,
+        'total': filtered_count,
         'has_prev': page > 1,
         'has_next': page < total_pages,
         'prev_num': page - 1 if page > 1 else None,
         'next_num': page + 1 if page < total_pages else None
     }
     
+    # Current filters for template
+    current_filters = {
+        'search': search,
+        'rarity': rarity,
+        'color': color,
+        'card_type': card_type,
+        'mana_min': mana_min,
+        'mana_max': mana_max,
+        'sort': sort_by,
+        'order': order
+    }
+    
     return render_template('index.html', 
                          cards=cards, 
                          stats=stats, 
                          pagination=pagination,
-                         current_filters={},
+                         current_filters=current_filters,
+                         filtered_count=filtered_count,
                          active_updates=active_updates,
-                         progress_state=progress_state)
+                         progress_state=progress_state,
+                         rarities=rarities,
+                         colors=colors,
+                         card_types=card_types)
 
 @app.route('/add_card', methods=['GET', 'POST'])
 @login_required
@@ -448,7 +692,7 @@ def add_card():
                 conn.close()
                 
                 flash(f'Updated {card_name} quantity to {new_quantity} (added {quantity})')
-                return redirect(url_for('index'))
+                return redirect(url_for('add_card'))
             
             # Insert new card
             cursor = conn.execute('''
@@ -503,7 +747,7 @@ def add_card():
             threading.Thread(target=fetch_card_data_background, daemon=True).start()
             
             flash(f'Added {card_name} to your collection (fetching prices and images...)')
-            return redirect(url_for('index'))
+            return redirect(url_for('add_card'))
             
         except ValueError as e:
             flash(f'Invalid input: {e}')
@@ -796,18 +1040,20 @@ def edit_card(card_id):
         flash('Card not found')
         return redirect(url_for('index'))
     
-    # Update card
-    card_name = request.form.get('card_name')
-    set_name = request.form.get('set_name', '')
+    # Update card - only update fields that exist in the form
     quantity = int(request.form.get('quantity', 1))
     condition = request.form.get('condition', 'Near Mint')
     purchase_price = float(request.form.get('purchase_price', 0))
+    alert_threshold = float(request.form.get('alert_threshold', 0))
+    
+    # Debug logging
+    logger.info(f"Updating card {card_id}: quantity={quantity}, condition={condition}, purchase_price={purchase_price}, alert_threshold={alert_threshold}")
     
     conn.execute('''
         UPDATE cards 
-        SET card_name = ?, set_name = ?, quantity = ?, condition = ?, purchase_price = ?
+        SET quantity = ?, condition = ?, purchase_price = ?, price_alert_threshold = ?
         WHERE id = ?
-    ''', (card_name, set_name, quantity, condition, purchase_price, card_id))
+    ''', (quantity, condition, purchase_price, alert_threshold, card_id))
     
     conn.commit()
     conn.close()
@@ -913,7 +1159,7 @@ def search_cards():
                     'rarity': card.get('rarity', '').title(),
                     'mana_cost': card.get('mana_cost', ''),
                     'type_line': card.get('type_line', ''),
-                    'colors': ','.join(card.get('colors', [])),
+                    'colors': ''.join(sorted(card.get('colors', []), key=lambda c: {'W': 0, 'U': 1, 'B': 2, 'R': 3, 'G': 4}.get(c, 5))),
                     'image_url': image_url,
                     'prices': {
                         'usd': card.get('prices', {}).get('usd'),
@@ -1120,4 +1366,4 @@ def api_card_image(card_id):
         return jsonify({'image_url': None})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5003)

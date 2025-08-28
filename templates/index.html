@@ -108,11 +108,38 @@
     </div>
     <div class="col-md-6 text-end">
         <button class="btn btn-outline-secondary me-2" data-bs-toggle="collapse" data-bs-target="#filterPanel">
-            <i class="fas fa-filter"></i> Filters
+            <i class="fas fa-filter"></i> Advanced Filters
         </button>
         <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">
             <i class="fas fa-upload"></i> Import CSV
         </button>
+    </div>
+</div>
+
+<!-- Quick Search Bar -->
+<div class="row mb-3">
+    <div class="col-md-8">
+        <form method="GET" action="{{ url_for('index') }}" class="d-flex">
+            <input type="text" class="form-control me-2" name="search" 
+                   placeholder="Search cards by name, set, or type..." 
+                   value="{{ current_filters.search }}"
+                   style="flex: 1;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Search
+            </button>
+            {% if current_filters.search %}
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-4">
+        {% if current_filters.search %}
+        <div class="text-muted small mt-2">
+            Searching for: <strong>"{{ current_filters.search }}"</strong>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -173,7 +200,7 @@
                                 <option value="">All Colors</option>
                                 {% for color in colors %}
                                 <option value="{{ color.colors }}" {{ 'selected' if current_filters.color == color.colors }}>
-                                    {{ color.colors }}
+                                    {{ color.display if color.display else color.colors }}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -194,7 +221,7 @@
                     </div>
                     <div class="col-md-2">
                         <div class="mb-3">
-                            <label class="form-label">Mana Value</label>
+                            <label class="form-label">Mana Cost</label>
                             <div class="input-group">
                                 <input type="number" class="form-control" name="mana_min" placeholder="Min" 
                                        value="{{ current_filters.mana_min }}" min="0" max="20">
@@ -211,7 +238,7 @@
                                 <option value="total_value" {{ 'selected' if current_filters.sort == 'total_value' }}>Total Value</option>
                                 <option value="current_price" {{ 'selected' if current_filters.sort == 'current_price' }}>Price</option>
                                 <option value="card_name" {{ 'selected' if current_filters.sort == 'card_name' }}>Name</option>
-                                <option value="mana_value" {{ 'selected' if current_filters.sort == 'mana_value' }}>Mana Value</option>
+                                <option value="mana_value" {{ 'selected' if current_filters.sort == 'mana_value' }}>Mana Cost</option>
                                 <option value="rarity" {{ 'selected' if current_filters.sort == 'rarity' }}>Rarity</option>
                                 <option value="card_type" {{ 'selected' if current_filters.sort == 'card_type' }}>Type</option>
                                 <option value="set_name" {{ 'selected' if current_filters.sort == 'set_name' }}>Set</option>
@@ -264,7 +291,7 @@
                 <th>Rarity</th>
                 <th>Color</th>
                 <th>Type</th>
-                <th>Mana</th>
+                <th>Cost</th>
                 <th>Qty</th>
                 <th>Current Price</th>
                 <th>Total Value</th>
@@ -307,7 +334,7 @@
                 <td>
                     {% if card.rarity %}
                         <span class="badge 
-                            {% if card.rarity == 'Mythic' %}bg-danger
+                            {% if card.rarity == 'Mythic' %}rarity-mythic
                             {% elif card.rarity == 'Rare' %}bg-warning
                             {% elif card.rarity == 'Uncommon' %}bg-info
                             {% else %}bg-secondary
@@ -318,16 +345,37 @@
                 </td>
                 <td>
                     {% if card.colors %}
-                        <span class="badge 
-                            {% if card.colors == 'White' %}bg-light text-dark
-                            {% elif card.colors == 'Blue' %}bg-primary
-                            {% elif card.colors == 'Black' %}bg-dark
-                            {% elif card.colors == 'Red' %}bg-danger
-                            {% elif card.colors == 'Green' %}bg-success
-                            {% elif card.colors == 'Multicolor' %}bg-info
-                            {% else %}bg-secondary
+                        <span class="color-badge
+                            {% if card.display_color == 'White' %} color-white
+                            {% elif card.display_color == 'Blue' %} color-blue
+                            {% elif card.display_color == 'Black' %} color-black
+                            {% elif card.display_color == 'Red' %} color-red
+                            {% elif card.display_color == 'Green' %} color-green
+                            {% elif card.display_color == 'Azorius' %} color-azorius
+                            {% elif card.display_color == 'Boros' %} color-boros
+                            {% elif card.display_color == 'Dimir' %} color-dimir
+                            {% elif card.display_color == 'Golgari' %} color-golgari
+                            {% elif card.display_color == 'Gruul' %} color-gruul
+                            {% elif card.display_color == 'Izzet' %} color-izzet
+                            {% elif card.display_color == 'Orzhov' %} color-orzhov
+                            {% elif card.display_color == 'Rakdos' %} color-rakdos
+                            {% elif card.display_color == 'Selesnya' %} color-selesnya
+                            {% elif card.display_color == 'Simic' %} color-simic
+                            {% elif card.display_color == 'Grixis' %} color-grixis
+                            {% elif card.display_color == 'Jund' %} color-jund
+                            {% elif card.display_color == 'Naya' %} color-naya
+                            {% elif card.display_color == 'Esper' %} color-esper
+                            {% elif card.display_color == 'Bant' %} color-bant
+                            {% elif card.display_color == 'Abzan' %} color-abzan
+                            {% elif card.display_color == 'Mardu' %} color-mardu
+                            {% elif card.display_color == 'Jeskai' %} color-jeskai
+                            {% elif card.display_color == 'Sultai' %} color-sultai
+                            {% elif card.display_color == 'Temur' %} color-temur
+                            {% elif card.colors == 'Multicolor' %} color-multicolor
+                            {% elif card.colors == 'Colorless' %} color-colorless
+                            {% else %} color-other
                             {% endif %}">
-                            {{ card.colors }}
+                            {{ card.display_color }}
                         </span>
                     {% endif %}
                 </td>
@@ -338,10 +386,12 @@
                 </td>
                 <td>
                     {% if card.mana_cost %}
-                        <code>{{ card.mana_cost }}</code>
-                        <small class="text-muted">({{ card.mana_value or 0 }})</small>
+                        <span class="fw-bold">{{ card.mana_cost.replace('{', '').replace('}', '') }}</span>
+                        {% if card.mana_value %}
+                            <small class="text-muted ms-1">({{ card.mana_value }})</small>
+                        {% endif %}
                     {% else %}
-                        <span class="text-muted">{{ card.mana_value or 0 }}</span>
+                        <span class="text-muted">—</span>
                     {% endif %}
                 </td>
                 <td>{{ card.quantity }}</td>
@@ -479,4 +529,183 @@
         </div>
     </div>
 </div>
+
+<style>
+.color-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 2px solid black;
+    font-weight: bold;
+    font-size: 0.75rem;
+    display: inline-block;
+    min-width: 60px;
+    text-align: center;
+}
+
+.color-white {
+    background-color: white;
+    color: black;
+}
+
+.color-blue {
+    background-color: #0066cc;
+    color: white;
+}
+
+.color-black {
+    background-color: #333333;
+    color: white;
+}
+
+.color-red {
+    background-color: #cc0000;
+    color: white;
+}
+
+.color-green {
+    background-color: #009900;
+    color: white;
+}
+
+.color-multicolor {
+    background: linear-gradient(45deg, #cc0000 20%, #0066cc 20%, #0066cc 40%, #009900 40%, #009900 60%, #ffcc00 60%, #ffcc00 80%, white 80%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-colorless {
+    background-color: #cccccc;
+    color: black;
+}
+
+.color-other {
+    background-color: #666666;
+    color: white;
+}
+
+/* Guild colors (2-color combinations) */
+.color-azorius {
+    background: linear-gradient(45deg, #0066cc 50%, white 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-boros {
+    background: linear-gradient(45deg, #cc0000 50%, white 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-dimir {
+    background: linear-gradient(45deg, #0066cc 50%, #333333 50%);
+    color: white;
+}
+
+.color-golgari {
+    background: linear-gradient(45deg, #333333 50%, #009900 50%);
+    color: white;
+}
+
+.color-gruul {
+    background: linear-gradient(45deg, #cc0000 50%, #009900 50%);
+    color: white;
+}
+
+.color-izzet {
+    background: linear-gradient(45deg, #0066cc 50%, #cc0000 50%);
+    color: white;
+}
+
+.color-orzhov {
+    background: linear-gradient(45deg, white 50%, #333333 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-rakdos {
+    background: linear-gradient(45deg, #cc0000 50%, #333333 50%);
+    color: white;
+}
+
+.color-selesnya {
+    background: linear-gradient(45deg, white 50%, #009900 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-simic {
+    background: linear-gradient(45deg, #0066cc 50%, #009900 50%);
+    color: white;
+}
+
+/* Shard and clan colors (3-color combinations) */
+.color-grixis {
+    background: linear-gradient(120deg, #0066cc 33%, #333333 33%, #333333 66%, #cc0000 66%);
+    color: white;
+}
+
+.color-jund {
+    background: linear-gradient(120deg, #333333 33%, #cc0000 33%, #cc0000 66%, #009900 66%);
+    color: white;
+}
+
+.color-naya {
+    background: linear-gradient(120deg, white 33%, #cc0000 33%, #cc0000 66%, #009900 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-esper {
+    background: linear-gradient(120deg, white 33%, #0066cc 33%, #0066cc 66%, #333333 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-bant {
+    background: linear-gradient(120deg, white 33%, #0066cc 33%, #0066cc 66%, #009900 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-abzan {
+    background: linear-gradient(120deg, white 33%, #333333 33%, #333333 66%, #009900 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-mardu {
+    background: linear-gradient(120deg, white 33%, #333333 33%, #333333 66%, #cc0000 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-jeskai {
+    background: linear-gradient(120deg, white 33%, #0066cc 33%, #0066cc 66%, #cc0000 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-sultai {
+    background: linear-gradient(120deg, #0066cc 33%, #333333 33%, #333333 66%, #009900 66%);
+    color: white;
+}
+
+.color-temur {
+    background: linear-gradient(120deg, #0066cc 33%, #cc0000 33%, #cc0000 66%, #009900 66%);
+    color: white;
+}
+
+/* Multicolor 4+ */
+.color-multicolor-4plus {
+    background: linear-gradient(72deg, #cc0000 20%, #0066cc 20%, #0066cc 40%, #009900 40%, #009900 60%, #ffcc00 60%, #ffcc00 80%, white 80%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.rarity-mythic {
+    background-color: #cc6600 !important;
+    color: white !important;
+}
+</style>
+
 {% endblock %}
