@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Add Card - TCG Inventory{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-plus"></i> Add New Card</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="card_name" class="form-label">Card Name *</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="card_name" name="card_name" 
+                                           autocomplete="off" placeholder="Start typing to search..." required>
+                                    <div id="card_suggestions" class="card-suggestions"></div>
+                                    <div id="search_loading" class="position-absolute top-50 end-0 translate-middle-y me-2" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin text-muted"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="set_name" class="form-label">Set Name</label>
+                                <input type="text" class="form-control" id="set_name" name="set_name">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="set_code" class="form-label">Set Code</label>
+                                <input type="text" class="form-control" id="set_code" name="set_code" 
+                                       placeholder="e.g. M21">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="collector_number" class="form-label">Collector #</label>
+                                <input type="text" class="form-control" id="collector_number" name="collector_number">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="quantity" class="form-label">Quantity *</label>
+                                <input type="number" class="form-control" id="quantity" name="quantity" 
+                                       value="1" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="condition" class="form-label">Condition</label>
+                                <select class="form-select" id="condition" name="condition">
+                                    <option value="Mint">Mint</option>
+                                    <option value="Near Mint" selected>Near Mint</option>
+                                    <option value="Excellent">Excellent</option>
+                                    <option value="Good">Good</option>
+                                    <option value="Light Played">Light Played</option>
+                                    <option value="Played">Played</option>
+                                    <option value="Poor">Poor</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="purchase_price" class="form-label">Purchase Price</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
+                                           value="0" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="is_foil" name="is_foil">
+                                <label class="form-check-label" for="is_foil">
+                                    Foil Card
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Card
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

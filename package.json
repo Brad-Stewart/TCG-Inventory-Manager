@@ -1,7 +1,7 @@
 {
-  "name": "tcg-inventory-ts",
-  "version": "1.0.0",
-  "description": "TCG Inventory Management System - TypeScript version",
+  "name": "tcg-inventory-manager",
+  "version": "2.0.0",
+  "description": "TCG Inventory Management System - Modern TypeScript/Express.js version with full Python feature parity",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -10,9 +10,9 @@
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["tcg", "inventory", "typescript", "express"],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["tcg", "inventory", "typescript", "express", "scryfall", "card-collection"],
+  "author": "Brad Stewart",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "express-session": "^1.17.3",

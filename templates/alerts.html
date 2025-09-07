@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Price Alerts - PackRat{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-bell"></i> Price Alerts</h2>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+{% if alerts %}
+<div class="row">
+    {% for alert in alerts %}
+    <div class="col-md-6 mb-3">
+        <div class="card {{ 'border-warning' if not alert.is_read else 'border-secondary' }}">
+            <div class="card-header {{ 'bg-warning' if not alert.is_read else 'bg-light' }}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        {% if alert.alert_type == 'price_change' %}
+                            <i class="fas fa-chart-line"></i> Price Change Alert
+                        {% endif %}
+                    </h6>
+                    <small class="text-muted">{{ alert.triggered_at }}</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ alert.card_name }}</h5>
+                <p class="card-text">
+                    <strong>Set:</strong> {{ alert.set_name }}<br>
+                    <strong>Current Price:</strong> ${{ "%.2f"|format(alert.current_price or 0) }}<br>
+                    <strong>Total Value:</strong> ${{ "%.2f"|format(alert.total_value or 0) }}<br>
+                    <strong>Price Change:</strong> 
+                    {% if alert.current_value > 0 %}
+                        <span class="text-success">+{{ "%.1f"|format(alert.current_value) }}%</span>
+                    {% elif alert.current_value < 0 %}
+                        <span class="text-danger">{{ "%.1f"|format(alert.current_value) }}%</span>
+                    {% else %}
+                        <span class="text-muted">0.0%</span>
+                    {% endif %}
+                </p>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('card_detail', card_id=alert.card_id) }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit"></i> View/Edit Card
+                    </a>
+                    {% if not alert.is_read %}
+                    <a href="{{ url_for('mark_alert_read', alert_id=alert.id) }}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-check"></i> Mark Read
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+    <h4 class="text-muted">No Price Alerts</h4>
+    <p class="text-muted">Set price alert thresholds on your cards to get notified of significant price changes.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">
+        <i class="fas fa-cog"></i> Configure Alerts
+    </a>
+</div>
+{% endif %}
+
+<div class="mt-5">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> About Price Alerts</h5>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li>Price alerts are checked hourly in the background</li>
+                <li>Set alert thresholds as percentages (e.g., 10% for 10% price change)</li>
+                <li>Alerts are only triggered once per 24-hour period per card</li>
+                <li>Price data is sourced from Scryfall API</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

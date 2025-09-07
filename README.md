@@ -1,208 +1,248 @@
-# TCG Inventory Manager - TypeScript Edition
+# TCG Inventory Manager
 
-A modern TypeScript/Node.js web application for managing Trading Card Game (TCG) collections. This application allows you to track your cards, monitor prices, and manage your inventory with real-time price updates from Scryfall.
+A comprehensive web application for managing Trading Card Game (TCG) collections with features for price tracking, bulk operations, and detailed inventory management.
 
-## Features
+## 🚀 **Version 2.0 - TypeScript Edition Available!**
 
-- **Card Management**: Add, edit, delete, and organize your TCG cards
-- **Price Tracking**: Real-time price updates from Scryfall API
-- **CSV Import**: Import collections from CSV files (Manabox exports supported)
-- **Search & Filter**: Advanced filtering by name, rarity, color, mana cost, etc.
-- **User Authentication**: Secure user accounts with bcrypt password hashing
-- **Responsive Design**: Bootstrap-based UI that works on desktop and mobile
-- **Progress Tracking**: Background processing with real-time progress updates
+This repository now contains **both versions**:
+- 📁 **Python/Flask** (original) - Stable, feature-complete
+- 📁 **TypeScript/Express.js** (new) - Modern, type-safe rewrite
 
-## Technology Stack
+---
 
-- **Backend**: Node.js, Express.js, TypeScript
-- **Database**: SQLite3
-- **Frontend**: EJS templates, Bootstrap 5, jQuery
-- **APIs**: Scryfall API for card data and pricing
-- **Authentication**: Express-session with bcrypt
+## 🆕 **TypeScript Version (Recommended)**
 
-## Quick Start
+A modern TypeScript/Node.js rewrite with full feature parity, enhanced type safety, and improved developer experience.
 
-### Prerequisites
+### **Quick Start (TypeScript)**
 
-- Node.js 18+ 
-- npm or yarn
-
-### Installation
-
-1. Clone the repository
 ```bash
-git clone <repository-url>
-cd tcg-inventory-ts
-```
+# Navigate to TypeScript version
+cd tcg-inventory-ts/
 
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
-```
 
-3. Create environment file
-```bash
-cp .env.example .env
-```
-
-4. Build the TypeScript code
-```bash
+# Build the application
 npm run build
-```
 
-5. Start the application
-```bash
+# Start the server
 npm start
-```
 
-Or for development:
-```bash
+# Or run in development mode
 npm run dev
 ```
 
-The application will be available at `http://localhost:5001`
+**Access:** http://localhost:5001  
+**Login:** `admin@packrat.local` / `packrat123`
 
-### Default Admin Account
+### **TypeScript Features**
 
-- Email: `admin@packrat.local`
-- Password: `packrat123`
+- ✅ **Type Safety** - Full TypeScript with strict typing
+- ✅ **Modern Stack** - Express.js, EJS templates, SQLite
+- ✅ **Hot Reload** - Development server with automatic restarts
+- ✅ **Better Performance** - Optimized async/await database operations
+- ✅ **Enhanced Security** - Bcrypt password hashing, session management
+- ✅ **Developer Experience** - ESLint, proper error handling, modular architecture
 
-## Development Commands
+---
+
+## 📊 **Core Features (Both Versions)**
+
+### **Card Management**
+- Add, edit, and delete cards from your collection
+- Card detail pages with images and market data
+- Bulk operations (delete, price updates) with checkbox selection
+- Advanced search and filtering capabilities
+
+### **Price Tracking**
+- Automatic price updates via Scryfall API with rate limiting
+- Real-time background processing with progress indicators
+- Price change tracking and alerts
+- Foil vs non-foil price support
+
+### **Import & Export**
+- CSV import from Manabox exports with automatic column mapping
+- Background processing for large imports
+- Template support for reusable collections
+
+### **Advanced Features**
+- User authentication with secure password hashing
+- Responsive Bootstrap UI that works on all devices
+- Card image previews with hover enlargement
+- Pagination for performance with large collections
+- Search by name, set, rarity, color, type, and mana value
+
+---
+
+## 🐍 **Python Version (Original)**
+
+The original Flask-based implementation with Google Sheets integration.
+
+### **Quick Start (Python)**
 
 ```bash
-# Development server with hot reload
-npm run dev
+# Install dependencies
+pip install flask requests pandas
 
-# Build TypeScript to JavaScript
+# Run the application
+python app.py
+```
+
+**Access:** http://localhost:5000
+
+### **Python-Specific Features**
+- Google Sheets integration for cloud storage
+- Pandas DataFrame processing
+- Collection synchronization capabilities
+
+---
+
+## 🔧 **Development**
+
+### **Architecture Comparison**
+
+| Feature | Python Version | TypeScript Version |
+|---------|----------------|-------------------|
+| **Web Framework** | Flask | Express.js |
+| **Database** | SQLite | SQLite |
+| **Templates** | Jinja2 | EJS |
+| **Type Safety** | ❌ | ✅ Full TypeScript |
+| **Development** | Basic reload | Hot reload + linting |
+| **Authentication** | SHA256 | Bcrypt |
+| **API Integration** | Requests | Axios |
+| **Package Management** | pip | npm |
+
+### **Shared Database Schema**
+
+Both versions use compatible SQLite databases:
+
+- **cards** - Card details, pricing, and inventory data
+- **users** - Authentication and user preferences
+- **price_alerts** - Price change notifications
+- **collection_templates** - Reusable collection definitions
+
+### **API Endpoints**
+
+Both versions expose similar REST APIs:
+
+- `GET /api/cards` - Get user's card collection
+- `GET /api/search_cards` - Search Scryfall for cards
+- `POST /api/mass_delete` - Bulk delete operations
+- `POST /api/mass_update_prices` - Bulk price updates
+- `POST /import_csv` - CSV import functionality
+
+---
+
+## 📱 **Usage**
+
+### **Initial Setup**
+1. Register a new account or use default admin credentials
+2. Import your collection via CSV or add cards manually
+3. Run price updates to populate current market values
+
+### **CSV Import**
+- Export your collection from Manabox as CSV
+- Use the "Import CSV" button on the dashboard
+- System automatically maps common column names
+- Background processing shows real-time progress
+
+### **Mass Operations**
+- Select multiple cards using checkboxes
+- Bulk update prices for selected cards
+- Mass delete unwanted cards
+- Progress tracking for long-running operations
+
+---
+
+## 🌐 **API Integration**
+
+### **Scryfall API**
+- Comprehensive Magic: The Gathering card database
+- Real-time pricing data (USD, USD Foil)
+- High-resolution card images
+- Card metadata (rarity, colors, mana cost, type)
+- Rate limiting compliance (100ms delays)
+
+---
+
+## 🚀 **Deployment**
+
+### **TypeScript Version**
+```bash
+# Production build
 npm run build
-
-# Start production server
 npm start
 
-# Type checking
-npm run typecheck
+# Using PM2
+pm2 start dist/index.js --name tcg-inventory
 
-# Linting
-npm run lint
+# Docker (if Dockerfile exists)
+docker build -t tcg-inventory .
+docker run -p 5001:5001 tcg-inventory
 ```
 
-## Project Structure
+### **Python Version**
+```bash
+# Using Gunicorn
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
 
-```
-src/
-├── database/           # Database layer
-│   └── database.ts     # SQLite database operations
-├── middleware/         # Express middleware
-│   └── auth.ts         # Authentication middleware
-├── routes/             # Express routes
-│   ├── auth.ts         # Authentication routes
-│   ├── cards.ts        # Card management routes
-│   └── api.ts          # API endpoints
-├── services/           # Business logic services
-│   ├── auth.ts         # Authentication service
-│   ├── scryfall.ts     # Scryfall API integration
-│   └── csvImport.ts    # CSV processing service
-├── types/              # TypeScript type definitions
-│   └── index.ts        # Application types
-└── index.ts            # Application entry point
-
-views/                  # EJS templates
-├── login.ejs
-├── register.ejs
-├── index.ejs           # Dashboard
-├── add_card.ejs
-├── card_detail.ejs
-├── collections.ejs
-└── alerts.ejs
+# Environment variables
+export FLASK_ENV=production
+export DATABASE_PATH=/path/to/inventory.db
 ```
 
-## API Endpoints
+---
 
-### Authentication
-- `GET /login` - Login page
-- `POST /login` - Login user
-- `GET /register` - Registration page  
-- `POST /register` - Register new user
-- `GET /logout` - Logout user
-
-### Card Management
-- `GET /` - Dashboard with card listing
-- `GET /add_card` - Add card form
-- `POST /add_card` - Create new card
-- `GET /card_detail/:id` - Card details page
-- `POST /edit_card/:id` - Update card
-- `POST /delete_card/:id` - Delete card
-- `POST /import_csv` - Import cards from CSV
-
-### API Routes
-- `GET /api/search_cards?q=query` - Search cards via Scryfall
-- `GET /api/cards` - Get user's cards (JSON)
-- `GET /api/card/:id/image` - Get card image URL
-- `POST /api/delete_all_cards` - Delete all user's cards
-- `POST /api/mass_delete` - Delete selected cards
-- `POST /api/mass_update_prices` - Update prices for selected cards
-
-## Features in Detail
-
-### CSV Import
-The application supports importing cards from CSV files, with automatic mapping of common column names:
-- Card Name, Set Name, Set Code
-- Collector Number, Quantity, Condition
-- Purchase Price, Rarity, Colors
-- Mana Cost, Mana Value, Card Type
-
-### Price Updates  
-Real-time price fetching from Scryfall API with:
-- Rate limiting (100ms delay between requests)
-- Support for both regular and foil prices
-- Background processing with progress tracking
-- Error handling and retry logic
-
-### Search & Filtering
-Advanced filtering options:
-- Text search across card names, sets, and types
-- Filter by rarity, colors, mana value range
-- Sorting by name, price, value, quantity
-- Pagination for large collections
-
-### Authentication & Security
-- Bcrypt password hashing
-- Session-based authentication
-- CSRF protection
-- SQL injection prevention with parameterized queries
-
-## Database Schema
-
-The application uses SQLite with the following main tables:
-
-- `users` - User accounts
-- `cards` - Individual cards in collections
-- `price_alerts` - Price change notifications
-- `collection_templates` - Reusable collection templates
-- `card_templates` - Template card definitions
-
-## Contributing
+## 🤝 **Contributing**
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
+2. Choose your preferred version (Python or TypeScript)
+3. Create a feature branch
+4. Make your changes with tests
 5. Submit a pull request
 
-## Migrating from Python Version
+### **Development Guidelines**
+- Follow existing code style and patterns
+- Add type annotations (TypeScript) or docstrings (Python)
+- Test your changes thoroughly
+- Update documentation as needed
 
-This TypeScript version maintains API compatibility with the original Python/Flask version. You can migrate your existing SQLite database by:
+---
 
-1. Copying your existing `inventory.db` file to the TypeScript project
-2. The database schema is compatible between versions
-3. User accounts and card data will be preserved
-
-## License
+## 📄 **License**
 
 MIT License - see LICENSE file for details
 
-## Support
+---
 
-- Create an issue for bugs or feature requests
-- Check the documentation for common questions
-- Review the code comments for implementation details
+## 🎯 **Roadmap**
+
+### **Upcoming Features**
+- [ ] Mobile app companion
+- [ ] Advanced analytics dashboard  
+- [ ] Collection sharing and social features
+- [ ] Integration with more card databases
+- [ ] Automated deck building suggestions
+- [ ] Advanced price prediction algorithms
+
+### **Version 3.0 Considerations**
+- GraphQL API layer
+- Real-time websocket updates
+- Advanced caching strategies
+- Machine learning price predictions
+- Multi-language support
+
+---
+
+## 📞 **Support**
+
+- 🐛 **Bug Reports:** Create an issue with detailed steps to reproduce
+- 💡 **Feature Requests:** Open an issue with your suggested enhancement
+- 📚 **Documentation:** Check the README and code comments
+- 💬 **Questions:** Start a discussion for general questions
+
+---
+
+**Choose your adventure:** Pick the Python version for simplicity or the TypeScript version for modern development practices!

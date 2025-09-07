@@ -1,0 +1,785 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Cards</h5>
+                <h2>{{ stats.total_cards or 0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Quantity</h5>
+                <h2>{{ stats.total_quantity or 0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Value</h5>
+                <h2>${{ "%.2f"|format(stats.total_value or 0) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">Avg. Card Value</h5>
+                <h2>${{ "%.2f"|format(stats.avg_price or 0) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if alerts %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="fas fa-bell"></i> Recent Price Alerts</h5>
+            </div>
+            <div class="card-body">
+                {% for alert in alerts %}
+                <div class="alert alert-warning d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>{{ alert.card_name }}</strong> ({{ alert.set_name }}) 
+                        - {{ "%.1f"|format(alert.current_value) }}% price change
+                    </span>
+                    <a href="{{ url_for('mark_alert_read', alert_id=alert.id) }}" class="btn btn-sm btn-outline-warning">
+                        Mark Read
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Price Update Progress -->
+<div id="progressContainer" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-sync-alt fa-spin"></i> Price Update Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 25px;">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        0%
+                    </div>
+                </div>
+                <div id="progressMessage" class="text-center">
+                    Waiting for updates...
+                </div>
+                <div id="progressDetails" class="mt-3">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <strong id="currentCard">0</strong> / <strong id="totalCards">0</strong>
+                            <br><small class="text-muted">Cards Processed</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <strong id="updatedCount">0</strong>
+                            <br><small class="text-muted">Successfully Updated</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <strong id="errorCount">0</strong>
+                            <br><small class="text-muted">Errors</small>
+                        </div>
+                    </div>
+                </div>
+                <div id="currentCardName" class="mt-2 text-center text-primary">
+                    <small><em>Current card: <span id="cardName">-</span></em></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Search Bar -->
+<div class="row mb-3">
+    <div class="col-md-8">
+        <form method="GET" action="{{ url_for('index') }}" class="d-flex" id="searchForm">
+            <input type="text" class="form-control me-2" name="search" id="quickSearchInput"
+                   placeholder="Search cards by name, set, or type..." 
+                   value="{{ current_filters.search }}"
+                   style="flex: 1;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Search
+            </button>
+            {% if current_filters.search %}
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-4">
+        <div id="searchStatus" class="text-muted small mt-2">
+            {% if current_filters.search %}
+            Searching for: <strong>"{{ current_filters.search }}"</strong>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h3>Inventory</h3>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-outline-secondary me-2" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+            <i class="fas fa-filter"></i> Advanced Filters
+        </button>
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">
+            <i class="fas fa-upload"></i> Import CSV
+        </button>
+    </div>
+</div>
+
+
+<!-- Mass Action Panel -->
+<div class="card mb-3" id="massActionPanel" style="display: none;">
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+            <span id="selectedCount" class="text-muted">0 cards selected</span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="massUpdatePrices()">
+                <i class="fas fa-refresh"></i> Update Prices
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="massDelete()">
+                <i class="fas fa-trash"></i> Delete Selected
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAllCards()">
+                <i class="fas fa-exclamation-triangle"></i> Delete All Cards
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearSelection()">
+                <i class="fas fa-times"></i> Clear Selection
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="collapse mb-4" id="filterPanel">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filter & Sort Options</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('index') }}" id="filterForm">
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   placeholder="Card or set name..." value="{{ current_filters.search }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="rarity" class="form-label">Rarity</label>
+                            <select class="form-select" id="rarity" name="rarity">
+                                <option value="">All Rarities</option>
+                                {% for rarity in rarities %}
+                                <option value="{{ rarity.rarity }}" {{ 'selected' if current_filters.rarity == rarity.rarity }}>
+                                    {{ rarity.rarity }}
+                                </option>
+                                {% endfor %}
+                                {% if not rarities %}
+                                <option value="" disabled>No rarities available</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="color" class="form-label">Color</label>
+                            <select class="form-select" id="color" name="color">
+                                <option value="">All Colors</option>
+                                {% for color in colors %}
+                                <option value="{{ color.colors }}" {{ 'selected' if current_filters.color == color.colors }}>
+                                    {{ color.display if color.display else color.colors }}
+                                </option>
+                                {% endfor %}
+                                {% if not colors %}
+                                <option value="" disabled>No colors available</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="card_type" class="form-label">Type</label>
+                            <select class="form-select" id="card_type" name="card_type">
+                                <option value="">All Types</option>
+                                {% for type in card_types %}
+                                <option value="{{ type.card_type }}" {{ 'selected' if current_filters.card_type == type.card_type }}>
+                                    {{ type.card_type }}
+                                </option>
+                                {% endfor %}
+                                {% if not card_types %}
+                                <option value="" disabled>No types available</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label class="form-label">Mana Cost</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" name="mana_min" placeholder="Min" 
+                                       value="{{ current_filters.mana_min }}" min="0" max="20">
+                                <span class="input-group-text">-</span>
+                                <input type="number" class="form-control" name="mana_max" placeholder="Max" 
+                                       value="{{ current_filters.mana_max }}" min="0" max="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="mb-3">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="total_value" {{ 'selected' if current_filters.sort == 'total_value' }}>Total Value</option>
+                                <option value="current_price" {{ 'selected' if current_filters.sort == 'current_price' }}>Price</option>
+                                <option value="card_name" {{ 'selected' if current_filters.sort == 'card_name' }}>Name</option>
+                                <option value="mana_value" {{ 'selected' if current_filters.sort == 'mana_value' }}>Mana Cost</option>
+                                <option value="rarity" {{ 'selected' if current_filters.sort == 'rarity' }}>Rarity</option>
+                                <option value="card_type" {{ 'selected' if current_filters.sort == 'card_type' }}>Type</option>
+                                <option value="set_name" {{ 'selected' if current_filters.sort == 'set_name' }}>Set</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="mb-3">
+                            <label for="order" class="form-label">Order</label>
+                            <select class="form-select" id="order" name="order">
+                                <option value="desc" {{ 'selected' if current_filters.order == 'desc' }}>↓</option>
+                                <option value="asc" {{ 'selected' if current_filters.order == 'asc' }}>↑</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Apply Filters
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </a>
+                        <button type="button" class="btn btn-outline-info" onclick="quickUpdateRarity()">
+                            <i class="fas fa-magic"></i> Quick Fix Rarity
+                        </button>
+                        <span class="ms-3 text-muted">
+                            Showing {{ cards|length }} of {{ pagination.total }} cards 
+                            (Page {{ pagination.page }} of {{ pagination.pages }})
+                        </span>
+                        {% if not rarities and not colors and not card_types %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>No filter options available.</strong> 
+                            Import some cards first to see rarity, color, and type filter options.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>
+                    <input type="checkbox" id="selectAll" class="form-check-input">
+                </th>
+                <th>Card Name</th>
+                <th>Set</th>
+                <th>Rarity</th>
+                <th>Color</th>
+                <th>Type</th>
+                <th>Cost</th>
+                <th>Qty</th>
+                <th>Current Price</th>
+                <th>Total Value</th>
+                <th>Price Change</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for card in cards %}
+            <tr>
+                <td>
+                    <input type="checkbox" class="form-check-input card-checkbox" value="{{ card.id }}">
+                </td>
+                <td class="card-name-cell">
+                    <div class="d-flex align-items-center">
+                        <div class="card-preview-container me-2">
+                            {% if card.image_url %}
+                            <img src="{{ card.image_url }}" 
+                                 class="card-preview-small" 
+                                 alt="{{ card.card_name }}"
+                                 data-card-name="{{ card.card_name }}"
+                                 data-image-url="{{ card.image_url }}">
+                            {% else %}
+                            <div class="card-preview-placeholder" 
+                                 data-card-name="{{ card.card_name }}"
+                                 data-card-id="{{ card.id }}">
+                                <i class="fas fa-image text-muted"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ card.card_name }}</strong>
+                            {% if card.is_foil %}
+                                <span class="badge bg-warning">Foil</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+                <td>{{ card.set_name }}</td>
+                <td>
+                    {% if card.rarity %}
+                        <span class="badge 
+                            {% if card.rarity == 'Mythic' %}rarity-mythic
+                            {% elif card.rarity == 'Rare' %}bg-warning
+                            {% elif card.rarity == 'Uncommon' %}bg-info
+                            {% elif card.rarity == 'Special' %}rarity-special
+                            {% else %}bg-secondary
+                            {% endif %}">
+                            {{ card.rarity }}
+                        </span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if card.colors or card.display_color == 'Colorless' %}
+                        <span class="color-badge
+                            {% if card.display_color == 'White' %} color-white
+                            {% elif card.display_color == 'Blue' %} color-blue
+                            {% elif card.display_color == 'Black' %} color-black
+                            {% elif card.display_color == 'Red' %} color-red
+                            {% elif card.display_color == 'Green' %} color-green
+                            {% elif card.display_color == 'Azorius' %} color-azorius
+                            {% elif card.display_color == 'Boros' %} color-boros
+                            {% elif card.display_color == 'Dimir' %} color-dimir
+                            {% elif card.display_color == 'Golgari' %} color-golgari
+                            {% elif card.display_color == 'Gruul' %} color-gruul
+                            {% elif card.display_color == 'Izzet' %} color-izzet
+                            {% elif card.display_color == 'Orzhov' %} color-orzhov
+                            {% elif card.display_color == 'Rakdos' %} color-rakdos
+                            {% elif card.display_color == 'Selesnya' %} color-selesnya
+                            {% elif card.display_color == 'Simic' %} color-simic
+                            {% elif card.display_color == 'Grixis' %} color-grixis
+                            {% elif card.display_color == 'Jund' %} color-jund
+                            {% elif card.display_color == 'Naya' %} color-naya
+                            {% elif card.display_color == 'Esper' %} color-esper
+                            {% elif card.display_color == 'Bant' %} color-bant
+                            {% elif card.display_color == 'Abzan' %} color-abzan
+                            {% elif card.display_color == 'Mardu' %} color-mardu
+                            {% elif card.display_color == 'Jeskai' %} color-jeskai
+                            {% elif card.display_color == 'Sultai' %} color-sultai
+                            {% elif card.display_color == 'Temur' %} color-temur
+                            {% elif card.display_color == 'Colorless' %} color-colorless
+                            {% elif card.colors == 'Multicolor' %} color-multicolor
+                            {% else %} color-other
+                            {% endif %}">
+                            {{ card.display_color }}
+                        </span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if card.card_type %}
+                        <small class="text-muted">{{ card.card_type }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if card.mana_cost %}
+                        <span class="fw-bold">{{ card.mana_cost.replace('{', '').replace('}', '') }}</span>
+                        <small class="text-muted ms-1">({{ card.calculated_mana_cost }})</small>
+                    {% else %}
+                        <span class="text-muted">{% if 'Land' in (card.card_type or '') %}-{% else %}0{% endif %}</span>
+                    {% endif %}
+                </td>
+                <td>{{ card.quantity }}</td>
+                <td>${{ "%.2f"|format(card.current_price or 0) }}</td>
+                <td>${{ "%.2f"|format(card.total_value or 0) }}</td>
+                <td>
+                    {% if card.price_change > 0 %}
+                        <span class="text-success">+${{ "%.2f"|format(card.price_change) }}</span>
+                    {% elif card.price_change < 0 %}
+                        <span class="text-danger">${{ "%.2f"|format(card.price_change) }}</span>
+                    {% else %}
+                        <span class="text-muted">$0.00</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('card_detail', card_id=card.id) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% if card.market_url %}
+                    <a href="{{ card.market_url }}" target="_blank" class="btn btn-sm btn-success">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<nav aria-label="Card pagination">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('index', page=pagination.prev_num, search=current_filters.search, rarity=current_filters.rarity, color=current_filters.color, card_type=current_filters.card_type, mana_min=current_filters.mana_min, mana_max=current_filters.mana_max, sort=current_filters.sort, order=current_filters.order) }}">
+                <i class="fas fa-chevron-left"></i> Previous
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+        </li>
+        {% endif %}
+        
+        {% for page_num in range(1, pagination.pages + 1) %}
+            {% if page_num == pagination.page %}
+            <li class="page-item active">
+                <span class="page-link">{{ page_num }}</span>
+            </li>
+            {% elif page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 2 and page_num <= pagination.page + 2) %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('index', page=page_num, search=current_filters.search, rarity=current_filters.rarity, color=current_filters.color, card_type=current_filters.card_type, mana_min=current_filters.mana_min, mana_max=current_filters.mana_max, sort=current_filters.sort, order=current_filters.order) }}">{{ page_num }}</a>
+            </li>
+            {% elif page_num == 4 or page_num == pagination.pages - 3 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if pagination.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('index', page=pagination.next_num, search=current_filters.search, rarity=current_filters.rarity, color=current_filters.color, card_type=current_filters.card_type, mana_min=current_filters.mana_min, mana_max=current_filters.mana_max, sort=current_filters.sort, order=current_filters.order) }}">
+                Next <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Import CSV Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import CSV File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('import_csv') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">Upload CSV File</label>
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                        <div class="form-text">Select your Manabox CSV export file</div>
+                    </div>
+                    <div class="text-center my-3">
+                        <strong>OR</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label for="csv_path" class="form-label">CSV File Path (Linux/WSL only)</label>
+                        <input type="text" class="form-control" id="csv_path" name="csv_path" 
+                               placeholder="/path/to/file.csv">
+                        <div class="form-text">Full Linux path to your CSV file (if accessible)</div>
+                    </div>
+                    
+                    <!-- Template Creation Options -->
+                    <hr>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="create_template" name="create_template">
+                            <label class="form-check-label" for="create_template">
+                                <strong>Create Collection Template</strong>
+                            </label>
+                        </div>
+                        <div class="form-text">Allow other users to import this collection as their own independent copy</div>
+                    </div>
+                    
+                    <div class="mb-3" id="template_options" style="display: none;">
+                        <label for="template_name" class="form-label">Template Name</label>
+                        <input type="text" class="form-control" id="template_name" name="template_name" 
+                               placeholder="e.g. 'My EDH Deck' or 'Modern Collection'">
+                        
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="make_public" name="make_public">
+                            <label class="form-check-label" for="make_public">
+                                Make template public immediately
+                            </label>
+                        </div>
+                        <div class="form-text">If unchecked, template will be private (you can make it public later)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="analyzeCSV()">Analyze CSV</button>
+                    <button type="submit" class="btn btn-primary">Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.color-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 2px solid black;
+    font-weight: bold;
+    font-size: 0.75rem;
+    display: inline-block;
+    min-width: 60px;
+    text-align: center;
+}
+
+.color-white {
+    background-color: white;
+    color: black;
+}
+
+.color-blue {
+    background-color: #0066cc;
+    color: white;
+}
+
+.color-black {
+    background-color: #333333;
+    color: white;
+}
+
+.color-red {
+    background-color: #cc0000;
+    color: white;
+}
+
+.color-green {
+    background-color: #009900;
+    color: white;
+}
+
+.color-multicolor {
+    background: linear-gradient(45deg, #cc0000 20%, #0066cc 20%, #0066cc 40%, #009900 40%, #009900 60%, #ffcc00 60%, #ffcc00 80%, white 80%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-colorless {
+    background-color: #666666;
+    color: white;
+}
+
+.color-other {
+    background-color: #666666;
+    color: white;
+}
+
+/* Guild colors (2-color combinations) */
+.color-azorius {
+    background: linear-gradient(45deg, #0066cc 50%, white 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-boros {
+    background: linear-gradient(45deg, #cc0000 50%, white 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-dimir {
+    background: linear-gradient(45deg, #0066cc 50%, #333333 50%);
+    color: white;
+}
+
+.color-golgari {
+    background: linear-gradient(45deg, #333333 50%, #009900 50%);
+    color: white;
+}
+
+.color-gruul {
+    background: linear-gradient(45deg, #cc0000 50%, #009900 50%);
+    color: white;
+}
+
+.color-izzet {
+    background: linear-gradient(45deg, #0066cc 50%, #cc0000 50%);
+    color: white;
+}
+
+.color-orzhov {
+    background: linear-gradient(45deg, white 50%, #333333 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-rakdos {
+    background: linear-gradient(45deg, #cc0000 50%, #333333 50%);
+    color: white;
+}
+
+.color-selesnya {
+    background: linear-gradient(45deg, white 50%, #009900 50%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-simic {
+    background: linear-gradient(45deg, #0066cc 50%, #009900 50%);
+    color: white;
+}
+
+/* Shard and clan colors (3-color combinations) */
+.color-grixis {
+    background: linear-gradient(120deg, #0066cc 33%, #333333 33%, #333333 66%, #cc0000 66%);
+    color: white;
+}
+
+.color-jund {
+    background: linear-gradient(120deg, #333333 33%, #cc0000 33%, #cc0000 66%, #009900 66%);
+    color: white;
+}
+
+.color-naya {
+    background: linear-gradient(120deg, white 33%, #cc0000 33%, #cc0000 66%, #009900 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-esper {
+    background: linear-gradient(120deg, white 33%, #0066cc 33%, #0066cc 66%, #333333 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-bant {
+    background: linear-gradient(120deg, white 33%, #0066cc 33%, #0066cc 66%, #009900 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-abzan {
+    background: linear-gradient(120deg, white 33%, #333333 33%, #333333 66%, #009900 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-mardu {
+    background: linear-gradient(120deg, white 33%, #333333 33%, #333333 66%, #cc0000 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-jeskai {
+    background: linear-gradient(120deg, white 33%, #0066cc 33%, #0066cc 66%, #cc0000 66%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.color-sultai {
+    background: linear-gradient(120deg, #0066cc 33%, #333333 33%, #333333 66%, #009900 66%);
+    color: white;
+}
+
+.color-temur {
+    background: linear-gradient(120deg, #0066cc 33%, #cc0000 33%, #cc0000 66%, #009900 66%);
+    color: white;
+}
+
+/* Multicolor 4+ */
+.color-multicolor-4plus {
+    background: linear-gradient(72deg, #cc0000 20%, #0066cc 20%, #0066cc 40%, #009900 40%, #009900 60%, #ffcc00 60%, #ffcc00 80%, white 80%);
+    color: black;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+
+.rarity-mythic {
+    background-color: #cc6600 !important;
+    color: white !important;
+}
+
+.rarity-special {
+    background-color: #8a2be2 !important;
+    color: white !important;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('quickSearchInput');
+    const searchStatus = document.getElementById('searchStatus');
+    let searchTimeout = null;
+    
+    if (searchInput) {
+        // Add input event listener for real-time search
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            // Clear existing timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Update search status immediately
+            if (query.length > 0) {
+                searchStatus.innerHTML = 'Searching for: <strong>"' + escapeHtml(query) + '"</strong> <span class="spinner-border spinner-border-sm text-muted ms-2" role="status"></span>';
+            } else {
+                searchStatus.innerHTML = '';
+            }
+            
+            // Set timeout for search execution (debounce)
+            searchTimeout = setTimeout(function() {
+                if (query.length >= 2 || query.length === 0) {
+                    // Update URL and submit form
+                    const form = document.getElementById('searchForm');
+                    const currentUrl = new URL(window.location.href);
+                    
+                    if (query.length > 0) {
+                        currentUrl.searchParams.set('search', query);
+                    } else {
+                        currentUrl.searchParams.delete('search');
+                    }
+                    
+                    // Navigate to new URL to trigger server-side search
+                    window.location.href = currentUrl.toString();
+                }
+            }, 300); // 300ms delay to avoid too many requests while typing
+        });
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+});
+</script>
+{% endblock %}

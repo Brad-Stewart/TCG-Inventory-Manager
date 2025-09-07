@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Collections - TCG Inventory Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-folder-open"></i> Collection Templates</h2>
+        <p class="text-muted">Share and import collections between accounts. Each user gets an independent copy that they can modify without affecting others.</p>
+    </div>
+</div>
+
+<!-- Available Templates -->
+<div class="row">
+    <div class="col-12">
+        <h4>Available Templates</h4>
+        
+        {% if templates %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Creator</th>
+                        <th>Cards</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in templates %}
+                    <tr>
+                        <td>
+                            <strong>{{ template.name }}</strong>
+                            {% if not template.is_public %}
+                                <span class="badge bg-secondary">Private</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ template.description or "No description" }}</td>
+                        <td>{{ template.creator_email }}</td>
+                        <td>{{ template.card_count }}</td>
+                        <td>{{ template.created_at[:10] }}</td>
+                        <td>
+                            {% if template.is_imported %}
+                                <span class="badge bg-success">Already Imported</span>
+                            {% else %}
+                                <a href="{{ url_for('import_template', template_id=template.id) }}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Import
+                                </a>
+                            {% endif %}
+                            
+                            {% if template.created_by == session.user_id %}
+                                {% if not template.is_public %}
+                                    <a href="{{ url_for('share_template', template_id=template.id) }}" 
+                                       class="btn btn-sm btn-info">
+                                        <i class="fas fa-share"></i> Make Public
+                                    </a>
+                                {% endif %}
+                                <form style="display: inline;" method="POST" 
+                                      action="{{ url_for('delete_template', template_id=template.id) }}"
+                                      onsubmit="return confirm('Are you sure you want to delete this template?')">
+                                    <button class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No collection templates available. 
+            Create one by importing a CSV and checking "Create Template".
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User's Imported Collections -->
+<div class="row mt-4">
+    <div class="col-12">
+        <h4>Your Imported Collections</h4>
+        
+        {% if user_collections %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Collection Name</th>
+                        <th>Description</th>
+                        <th>Cards in Your Collection</th>
+                        <th>Imported Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for collection in user_collections %}
+                    <tr>
+                        <td><strong>{{ collection.instance_name }}</strong></td>
+                        <td>{{ collection.description or "No description" }}</td>
+                        <td>{{ collection.card_count }}</td>
+                        <td>{{ collection.imported_at[:10] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> You haven't imported any collections yet.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> How Collection Sharing Works</h5>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li><strong>Create Template:</strong> When importing a CSV, check "Create Template" to make it shareable</li>
+                    <li><strong>Independent Copies:</strong> Each user gets their own copy - changes don't affect other users</li>
+                    <li><strong>Public vs Private:</strong> Private templates are only visible to you, public ones can be imported by anyone</li>
+                    <li><strong>Import Process:</strong> Importing creates new cards in your collection with default purchase prices of $0</li>
+                    <li><strong>Customization:</strong> After importing, you can edit quantities, conditions, purchase prices independently</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

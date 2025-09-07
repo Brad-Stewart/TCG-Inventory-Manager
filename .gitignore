@@ -103,11 +103,26 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+inventory.db
 
 # Uploads
 uploads/
 
-# IDE
+# Session files
+cookies.txt
+fresh_cookies.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+
+# IDE files
 .vscode/
 .idea/
 *.swp
@@ -121,3 +136,7 @@ uploads/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
